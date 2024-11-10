@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ItemResponseDto {
     private int id;
+    private int barcode;
     private String name;
     private String category;
     private String description;

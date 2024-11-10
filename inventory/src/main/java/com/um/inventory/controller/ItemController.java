@@ -1,8 +1,8 @@
 package com.um.inventory.controller;
 
-import com.um.inventory.dto.ItemCreationDto;
+import com.um.inventory.dto.ItemRequestDto;
 import com.um.inventory.dto.ItemResponseDto;
-import com.um.inventory.service.ItemService;
+import com.um.inventory.service.impl.ItemServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,10 +15,10 @@ import java.util.Optional;
 @RequestMapping("/api")
 public class ItemController {
 
-    private ItemService itemService;
+    private ItemServiceImpl itemService;
 
     @Autowired
-    public ItemController(ItemService itemService) {
+    public ItemController(ItemServiceImpl itemService) {
         this.itemService = itemService;
     }
 
@@ -37,13 +37,13 @@ public class ItemController {
 
     @PostMapping("item/create")
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<ItemResponseDto> createItem(@RequestBody ItemCreationDto itemCreationDto){
-        return new ResponseEntity<>(itemService.addItem(itemCreationDto), HttpStatus.CREATED);
+    public ResponseEntity<ItemResponseDto> createItem(@RequestBody ItemRequestDto itemRequestDto){
+        return new ResponseEntity<>(itemService.addItem(itemRequestDto), HttpStatus.CREATED);
     }
 
     @PutMapping("item/{id}/update")
-    public ResponseEntity<ItemResponseDto> updateItem(@RequestBody ItemCreationDto itemCreationDto, @PathVariable("id") int id){
-        return new ResponseEntity<>(itemService.updateItem(itemCreationDto, id), HttpStatus.OK);
+    public ResponseEntity<ItemResponseDto> updateItem(@RequestBody ItemRequestDto itemRequestDto, @PathVariable("id") int id){
+        return new ResponseEntity<>(itemService.updateItem(itemRequestDto, id), HttpStatus.OK);
     }
 
     @DeleteMapping("item/{id}/delete")

@@ -1,6 +1,6 @@
 package com.um.inventory.controller;
 
-import com.um.inventory.dto.TransactionCreationDto;
+import com.um.inventory.dto.TransactionRequestDto;
 import com.um.inventory.dto.TransactionResponseDto;
 import com.um.inventory.service.TransactionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,12 +37,12 @@ public class TransactionController {
 
     @PostMapping("transaction/create")
     @ResponseStatus(HttpStatus.CREATED)
-    public ResponseEntity<TransactionResponseDto> createTransaction(@RequestBody TransactionCreationDto transaction){
+    public ResponseEntity<TransactionResponseDto> createTransaction(@RequestBody TransactionRequestDto transaction){
         return new ResponseEntity<>(transactionService.createTransaction(transaction), HttpStatus.CREATED);
     }
 
     @PutMapping("transaction/{id}/update")
-    public ResponseEntity<TransactionResponseDto> updateTransaction(@RequestBody TransactionCreationDto transactionDto, @PathVariable("id") int id){
+    public ResponseEntity<TransactionResponseDto> updateTransaction(@RequestBody TransactionRequestDto transactionDto, @PathVariable("id") int id){
         return new ResponseEntity<>(transactionService.updateTransaction(transactionDto, id), HttpStatus.OK);
     }
 

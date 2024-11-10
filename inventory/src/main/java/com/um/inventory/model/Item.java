@@ -13,7 +13,10 @@ import lombok.NoArgsConstructor;
 @Builder
 public class Item {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
+
+    private int barcode;
 
     private String name;
 

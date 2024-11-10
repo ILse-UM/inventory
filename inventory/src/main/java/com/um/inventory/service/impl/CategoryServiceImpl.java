@@ -1,5 +1,6 @@
 package com.um.inventory.service.impl;
 
+import com.um.inventory.dto.CategoryRequestDto;
 import com.um.inventory.dto.CategoryResponseDto;
 import com.um.inventory.model.Category;
 import com.um.inventory.repository.CategoryRepository;
@@ -36,19 +37,19 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public CategoryResponseDto createCategory(String name) {
+    public CategoryResponseDto createCategory(CategoryRequestDto categoryRequestDto) {
         Category category = new Category();
-        category.setName(name);
+        category.setName(categoryRequestDto.getName());
 
-        categoryRepository.save(category);
+        Category categorySaved = categoryRepository.save(category);
 
-        return toCategoryDto(category);
+        return toCategoryDto(categorySaved);
     }
 
     @Override
-    public CategoryResponseDto updateCategory(int id, String name) {
+    public CategoryResponseDto updateCategory(int id, CategoryRequestDto categoryRequestDto) {
         Category category = categoryRepository.findById(id).orElse(null);
-        category.setName(name);
+        category.setName(categoryRequestDto.getName());
         categoryRepository.save(category);
         return toCategoryDto(category);
     }
@@ -61,6 +62,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     private CategoryResponseDto toCategoryDto(Category category) {
         CategoryResponseDto categoryResponseDto = new CategoryResponseDto();
+        categoryResponseDto.setId(category.getId());
         categoryResponseDto.setName(category.getName());
         return categoryResponseDto;
     }

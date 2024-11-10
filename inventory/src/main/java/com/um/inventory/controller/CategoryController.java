@@ -1,5 +1,6 @@
 package com.um.inventory.controller;
 
+import com.um.inventory.dto.CategoryRequestDto;
 import com.um.inventory.dto.CategoryResponseDto;
 import com.um.inventory.service.impl.CategoryServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,12 +33,12 @@ public class CategoryController {
     }
 
     @PostMapping("/create")
-    public CategoryResponseDto createCategory(@RequestBody String category) {
+    public CategoryResponseDto createCategory(@RequestBody CategoryRequestDto category) {
         return categoryService.createCategory(category);
     }
 
     @PutMapping("/{id}/update")
-    public ResponseEntity<CategoryResponseDto> updateCategory(@PathVariable int id, @RequestBody String category) {
+    public ResponseEntity<CategoryResponseDto> updateCategory(@PathVariable int id, @RequestBody CategoryRequestDto category) {
         try {
             return ResponseEntity.ok(categoryService.updateCategory(id, category));
         } catch (RuntimeException e) {

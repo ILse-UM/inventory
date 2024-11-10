@@ -1,6 +1,6 @@
 package com.um.inventory.service.impl;
 
-import com.um.inventory.dto.ItemCreationDto;
+import com.um.inventory.dto.ItemRequestDto;
 import com.um.inventory.dto.ItemResponseDto;
 import com.um.inventory.model.*;
 import com.um.inventory.repository.CategoryRepository;
@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class itemServiceImpl implements ItemService {
+public class ItemServiceImpl implements ItemService {
 
 
     private final CategoryRepository categoryRepository;
@@ -26,15 +26,15 @@ public class itemServiceImpl implements ItemService {
     ItemLogRepository itemLogRepository;
 
     @Autowired
-    public itemServiceImpl(ItemRepository itemRepository, ItemLogRepository itemLogRepository, CategoryRepository categoryRepository) {
+    public ItemServiceImpl(ItemRepository itemRepository, ItemLogRepository itemLogRepository, CategoryRepository categoryRepository) {
         this.itemRepository = itemRepository;
         this.itemLogRepository = itemLogRepository;
         this.categoryRepository = categoryRepository;
     }
 
     @Override
-    public ItemResponseDto addItem(ItemCreationDto itemCreationDto) {
-        Item item = toItem(itemCreationDto);
+    public ItemResponseDto addItem(ItemRequestDto itemRequestDto) {
+        Item item = toItem(itemRequestDto);
         Item itemSaved = itemRepository.save(item);
 
         ItemLog log = new ItemLog();
@@ -63,26 +63,27 @@ public class itemServiceImpl implements ItemService {
     }
 
     @Override
-    public ItemResponseDto updateItem(ItemCreationDto itemCreationDto, int id) {
+    public ItemResponseDto updateItem(ItemRequestDto itemRequestDto, int id) {
         Item item = itemRepository.findById(id).orElseThrow(() -> new RuntimeException("Item tidak ditemukan"));
 
         ItemLog log = new ItemLog();
         log.setItem(item);
         log.setPreviousAmount(item.getAmount());
-        log.setCurrentAmount(itemCreationDto.getAmount());
-        log.setChange(itemCreationDto.getAmount() > item.getAmount() ? Change.PLUS : Change.MINUS);
+        log.setCurrentAmount(itemRequestDto.getAmount());
+        log.setChange(itemRequestDto.getAmount() > item.getAmount() ? Change.PLUS : Change.MINUS);
         log.setActionType(ActionType.UPDATE);
 
         itemLogRepository.save(log);
 
-        item.setName(itemCreationDto.getName());
-        Category category = categoryRepository.findByName(itemCreationDto.getCategory()).orElse(null);
+        item.setBarcode(itemRequestDto.getBarcode());
+        item.setName(itemRequestDto.getName());
+        Category category = categoryRepository.findByName(itemRequestDto.getCategory()).orElse(null);
         item.setCategory(category);
-        item.setDescription(itemCreationDto.getDescription());
-        item.setAmount(itemCreationDto.getAmount());
-        item.setPurchasePrice(itemCreationDto.getPurchasePrice());
-        item.setSellPrice(itemCreationDto.getSellPrice());
-        item.setImage(itemCreationDto.getImage());
+        item.setDescription(itemRequestDto.getDescription());
+        item.setAmount(itemRequestDto.getAmount());
+        item.setPurchasePrice(itemRequestDto.getPurchasePrice());
+        item.setSellPrice(itemRequestDto.getSellPrice());
+        item.setImage(itemRequestDto.getImage());
         Item itemUpdated = itemRepository.save(item);
 
         return toItemDto(itemUpdated);
@@ -103,24 +104,28 @@ public class itemServiceImpl implements ItemService {
         itemRepository.deleteById(id);
     }
 
-    private Item toItem(ItemCreationDto itemCreationDto) {
-        Category category = categoryRepository.findByName(itemCreationDto.getCategory()).orElse(null);
+    private Item toItem(ItemRequestDto itemRequestDto) {
+        Category category = categoryRepository.findByName(itemRequestDto.getCategory()).orElse(null);
         return Item.builder()
-                .name(itemCreationDto.getName())
+                .barcode(itemRequestDto.getBarcode())
+                .name(itemRequestDto.getName())
                 .category(category)
-                .description(itemCreationDto.getDescription())
-                .amount(itemCreationDto.getAmount())
-                .purchasePrice(itemCreationDto.getPurchasePrice())
-                .sellPrice(itemCreationDto.getSellPrice())
-                .image(itemCreationDto.getImage())
+                .description(itemRequestDto.getDescription())
+                .amount(itemRequestDto.getAmount())
+                .purchasePrice(itemRequestDto.getPurchasePrice())
+                .sellPrice(itemRequestDto.getSellPrice())
+                .image(itemRequestDto.getImage())
                 .build();
     }
 
     private ItemResponseDto toItemDto(Item item) {
+        Category category = categoryRepository.findByName(item.getCategory().getName()).orElse(null);
+        assert category != null;
         return ItemResponseDto.builder()
                 .id(item.getId())
+                .barcode(item.getBarcode())
                 .name(item.getName())
-                .category(String.valueOf(item.getCategory().getName()))
+                .category(String.valueOf(category.getName()))
                 .description(item.getDescription())
                 .amount(item.getAmount())
                 .purchasePrice(item.getPurchasePrice())

@@ -24,11 +24,9 @@ import java.util.stream.Collectors;
 @Service
 public class TransactionServiceImpl implements TransactionService {
 
-    private TransactionRepository transactionRepository;
-
-    private ItemRepository itemRepository;
-
-    private TransactionItemRepository transactionItemRepository;
+    private final TransactionRepository transactionRepository;
+    private final ItemRepository itemRepository;
+    private final TransactionItemRepository transactionItemRepository;
 
     @Autowired
     public TransactionServiceImpl(TransactionRepository transactionRepository,
@@ -40,41 +38,47 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public TransactionResponseDto createTransaction(TransactionCreationDto transactionDto) {
+    public TransactionResponseDto createTransaction(TransactionRequestDto transactionDto) {
         Transaction transaction = new Transaction();
         transaction.setTransactionDate(LocalDateTime.now());
         transaction.setTransactionType(TransactionType.valueOf(transactionDto.getTransactionType()));
         transaction.setDescription(transactionDto.getDescription());
 
+        // Simpan transaksi utama terlebih dahulu
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        // Proses item transaksi dan kalkulasi total harga
         List<TransactionItem> transactionItems = new ArrayList<>();
-        int totalPrice = processTransactionItems(transactionDto, transaction, transactionItems);
+        int totalPrice = processTransactionItems(transactionDto, savedTransaction, transactionItems);
 
-        // Set item dan total harga pada transaksi
-        transaction.setItems(transactionItems);
-        transaction.setTotalPrice(totalPrice);
+        // Kosongkan koleksi item terlebih dahulu, lalu tambahkan item baru
+        savedTransaction.getItems().clear();
+        savedTransaction.getItems().addAll(transactionItems);
+        savedTransaction.setTotalPrice(totalPrice);
 
-        // Simpan transaksi ke repository
-        transactionRepository.save(transaction);
+        // Simpan ulang transaksi dengan item dan total harga yang sudah di-update
+        transactionRepository.save(savedTransaction);
 
-        // Kembalikan dalam bentuk TransactionResponseDto
-        return toTransactionResponseDto(transaction);
+        // Update jumlah item sesuai dengan transaksi
+        updateItemAmounts(transactionDto);
+
+        return toTransactionResponseDto(savedTransaction);
     }
 
     @Override
     public Optional<TransactionResponseDto> getTransaction(int id) {
-        Optional<TransactionResponseDto> response = transactionRepository.findById(id).map(this::toTransactionResponseDto);
-        return response;
+        return transactionRepository.findById(id).map(this::toTransactionResponseDto);
     }
 
     @Override
     public List<TransactionResponseDto> getAllTransaction(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Transaction> transactions = transactionRepository.findAll(pageable);
-        return transactions.getContent().stream().map(this::toTransactionResponseDto).toList();
+        return transactions.getContent().stream().map(this::toTransactionResponseDto).collect(Collectors.toList());
     }
 
     @Override
-    public TransactionResponseDto updateTransaction(TransactionCreationDto transactionDto, int id) {
+    public TransactionResponseDto updateTransaction(TransactionRequestDto transactionDto, int id) {
         // Cari transaksi berdasarkan Id, atau throw tidak ditemukan
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Transaction tidak ditemukan"));
@@ -86,29 +90,32 @@ public class TransactionServiceImpl implements TransactionService {
         List<TransactionItem> transactionItems = new ArrayList<>();
         int totalPrice = processTransactionItems(transactionDto, transaction, transactionItems);
 
-        transaction.setItems(transactionItems);
+        // Kosongkan koleksi item terlebih dahulu, lalu tambahkan item baru
+        transaction.getItems().clear();
+        transaction.getItems().addAll(transactionItems);
         transaction.setTotalPrice(totalPrice);
 
         // Simpan transaksi ke repository
         transactionRepository.save(transaction);
 
+        // Update jumlah item sesuai dengan transaksi
+        updateItemAmounts(transactionDto);
+
         return toTransactionResponseDto(transaction);
     }
-
 
     @Override
     public void deleteTransaction(int id) {
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Transaction tidak ditemukan"));
-
         transactionRepository.deleteById(id);
     }
 
-    private int processTransactionItems(TransactionCreationDto transactionDto,
+    private int processTransactionItems(TransactionRequestDto transactionDto,
                                         Transaction transaction,
                                         List<TransactionItem> transactionItems) {
         int totalPrice = 0;
-        for (TransactionItemDto itemDto : transactionDto.getItems()) {
+        for (TransactionItemRequestDto itemDto : transactionDto.getItems()) {
             totalPrice += processSingleTransactionItem(transaction, transactionItems, itemDto);
         }
         return totalPrice;
@@ -116,9 +123,9 @@ public class TransactionServiceImpl implements TransactionService {
 
     private int processSingleTransactionItem(Transaction transaction,
                                              List<TransactionItem> transactionItems,
-                                             TransactionItemDto itemDto) {
+                                             TransactionItemRequestDto itemDto) {
         // Cari item berdasarkan Id, atau throw tidak ditemukan
-        Item item = itemRepository.findById(itemDto.getItem().getId())
+        Item item = itemRepository.findById(itemDto.getId())
                 .orElseThrow(() -> new RuntimeException("Item tidak ditemukan"));
 
         // buat transaksi baru dan masukkan property
@@ -137,22 +144,44 @@ public class TransactionServiceImpl implements TransactionService {
         return itemDto.getAmount() * item.getSellPrice();
     }
 
+    private void updateItemAmounts(TransactionRequestDto transactionDto) {
+        for (TransactionItemRequestDto itemDto : transactionDto.getItems()) {
+            Item item = itemRepository.findById(itemDto.getId())
+                    .orElseThrow(() -> new RuntimeException("Item tidak ditemukan"));
+
+            // Perbarui jumlah item berdasarkan tipe transaksi
+            if (transactionDto.getTransactionType().equals("PURCHASE")) {
+                item.setAmount(item.getAmount() + itemDto.getAmount());
+            } else if (transactionDto.getTransactionType().equals("SALE")) {
+                item.setAmount(item.getAmount() - itemDto.getAmount());
+            }
+
+            // Simpan perubahan ke item repository
+            itemRepository.save(item);
+        }
+    }
+
     private TransactionResponseDto toTransactionResponseDto(Transaction transaction) {
         return TransactionResponseDto.builder()
                 .id(transaction.getId())
                 .transactionDate(transaction.getTransactionDate().toString())
                 .transactionType(transaction.getTransactionType())
-                .items(transaction.getItems().stream().map( item ->
-                        TransactionItemDto.builder()
-                                .item(ItemResponseDto.builder()
-                                        .id(item.getId())
-                                        .name(item.getItem().getName())
-                                        .category(String.valueOf(item.getItem().getCategory()))
+                .items(transaction.getItems().stream().map(item ->
+                                TransactionItemResponseDto.builder()
+                                        .item(ItemResponseDto.builder()
+                                                .id(item.getItem().getId())
+                                                .barcode(item.getItem().getBarcode())
+                                                .name(item.getItem().getName())
+                                                .category(String.valueOf(item.getItem().getCategory()))
+                                                .description(item.getItem().getDescription())
+                                                .amount(item.getItem().getAmount())
+                                                .purchasePrice(item.getItem().getPurchasePrice())
+                                                .sellPrice(item.getItem().getSellPrice())
+                                                .image(item.getItem().getImage())
+                                                .build())
+                                        .amount(item.getAmount())
                                         .build())
-                                .amount(item.getAmount())
-                                .build())
                         .collect(Collectors.toList()))
                 .build();
     }
-
 }

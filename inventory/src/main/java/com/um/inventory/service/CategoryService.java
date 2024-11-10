@@ -1,5 +1,6 @@
 package com.um.inventory.service;
 
+import com.um.inventory.dto.CategoryRequestDto;
 import com.um.inventory.dto.CategoryResponseDto;
 
 import java.util.List;
@@ -9,7 +10,7 @@ public interface CategoryService {
     List<CategoryResponseDto> getAllCategories();
     Optional<CategoryResponseDto> getCategoryById(int id);
     Optional<CategoryResponseDto> getCategoryByName(String name);
-    CategoryResponseDto createCategory(String name);
-    CategoryResponseDto updateCategory(int id, String name);
+    CategoryResponseDto createCategory(CategoryRequestDto categoryRequestDto);
+    CategoryResponseDto updateCategory(int id, CategoryRequestDto categoryRequestDto);
     void deleteCategory(int id);
 }
