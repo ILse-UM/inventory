@@ -1,6 +1,11 @@
 
 # Inventory Management REST API Documentation
 
+## Installation
+1. download this repo
+2. load maven dependency
+3. run the project
+   
 ## Endpoints
 
 ### Category API
