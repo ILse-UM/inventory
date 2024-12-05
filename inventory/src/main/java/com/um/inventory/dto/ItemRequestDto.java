@@ -9,8 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ItemResponseDto {
-    private int id;
+public class ItemRequestDto {
     private int barcode;
     private String name;
     private String category;

@@ -1,7 +1,9 @@
 package com.um.inventory.controller;
 
+import com.um.inventory.dto.ItemLogDto;
 import com.um.inventory.dto.ItemRequestDto;
 import com.um.inventory.dto.ItemResponseDto;
+import com.um.inventory.service.impl.ItemLogServiceImpl;
 import com.um.inventory.service.impl.ItemServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,11 +17,12 @@ import java.util.Optional;
 @RequestMapping("/api")
 public class ItemController {
 
-    private ItemServiceImpl itemService;
-
+    private final ItemServiceImpl itemService;
+    private final ItemLogServiceImpl itemLogService;
     @Autowired
-    public ItemController(ItemServiceImpl itemService) {
+    public ItemController(ItemServiceImpl itemService, ItemLogServiceImpl itemLogService) {
         this.itemService = itemService;
+        this.itemLogService = itemLogService;
     }
 
     @GetMapping("item")
@@ -50,5 +53,10 @@ public class ItemController {
     public ResponseEntity<String> deleteItem(@PathVariable("id") int id){
         itemService.deleteItem(id);
         return new ResponseEntity<>("Item deleted", HttpStatus.OK);
+    }
+
+    @GetMapping("item/log")
+    public ResponseEntity<List<ItemLogDto>> getItemsLog(){
+        return new ResponseEntity<>(itemLogService.getAllItemLog(), HttpStatus.OK);
     }
 }

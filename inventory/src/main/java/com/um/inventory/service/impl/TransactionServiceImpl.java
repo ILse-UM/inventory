@@ -1,14 +1,13 @@
 package com.um.inventory.service.impl;
 
 import com.um.inventory.dto.*;
-import com.um.inventory.model.Item;
-import com.um.inventory.model.Transaction;
-import com.um.inventory.model.TransactionItem;
-import com.um.inventory.model.TransactionType;
+import com.um.inventory.model.*;
+import com.um.inventory.repository.ItemLogRepository;
 import com.um.inventory.repository.ItemRepository;
 import com.um.inventory.repository.TransactionItemRepository;
 import com.um.inventory.repository.TransactionRepository;
 import com.um.inventory.service.TransactionService;
+import com.um.inventory.util.ImageUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,14 +26,17 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
     private final ItemRepository itemRepository;
     private final TransactionItemRepository transactionItemRepository;
+    private final ItemLogRepository itemLogRepository;
 
     @Autowired
     public TransactionServiceImpl(TransactionRepository transactionRepository,
                                   ItemRepository itemRepository,
-                                  TransactionItemRepository transactionItemRepository) {
+                                  TransactionItemRepository transactionItemRepository,
+                                  ItemLogRepository itemLogRepository) {
         this.transactionRepository = transactionRepository;
         this.itemRepository = itemRepository;
         this.transactionItemRepository = transactionItemRepository;
+        this.itemLogRepository = itemLogRepository;
     }
 
     @Override
@@ -149,17 +151,34 @@ public class TransactionServiceImpl implements TransactionService {
             Item item = itemRepository.findById(itemDto.getId())
                     .orElseThrow(() -> new RuntimeException("Item tidak ditemukan"));
 
+            int previousAmount = item.getAmount();
+            int changeAmount = itemDto.getAmount();
+            int newAmount;
+
             // Perbarui jumlah item berdasarkan tipe transaksi
             if (transactionDto.getTransactionType().equals("PURCHASE")) {
-                item.setAmount(item.getAmount() + itemDto.getAmount());
+                newAmount = previousAmount + changeAmount;
             } else if (transactionDto.getTransactionType().equals("SALE")) {
-                item.setAmount(item.getAmount() - itemDto.getAmount());
+                newAmount = previousAmount - changeAmount;
+            } else {
+                throw new RuntimeException("Tipe transaksi tidak valid");
             }
 
-            // Simpan perubahan ke item repository
+            // Simpan log perubahan
+            ItemLog log = new ItemLog();
+            log.setItem(item);
+            log.setPreviousAmount(previousAmount);
+            log.setCurrentAmount(newAmount);
+            log.setChange(transactionDto.getTransactionType().equals("PURCHASE") ? Change.PLUS : Change.MINUS);
+            log.setActionType(ActionType.UPDATE);
+            itemLogRepository.save(log);
+
+            // Update jumlah item dan simpan
+            item.setAmount(newAmount);
             itemRepository.save(item);
         }
     }
+
 
     private TransactionResponseDto toTransactionResponseDto(Transaction transaction) {
         return TransactionResponseDto.builder()
@@ -177,11 +196,12 @@ public class TransactionServiceImpl implements TransactionService {
                                                 .amount(item.getItem().getAmount())
                                                 .purchasePrice(item.getItem().getPurchasePrice())
                                                 .sellPrice(item.getItem().getSellPrice())
-                                                .image(item.getItem().getImage())
+                                                .imageBase64(ImageUtil.encodeToBase64(item.getItem().getImage()))
                                                 .build())
                                         .amount(item.getAmount())
                                         .build())
                         .collect(Collectors.toList()))
                 .build();
     }
+
 }

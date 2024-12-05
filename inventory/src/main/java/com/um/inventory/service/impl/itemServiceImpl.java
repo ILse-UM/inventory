@@ -7,6 +7,7 @@ import com.um.inventory.repository.CategoryRepository;
 import com.um.inventory.repository.ItemLogRepository;
 import com.um.inventory.repository.ItemRepository;
 import com.um.inventory.service.ItemService;
+import com.um.inventory.util.ImageUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -83,7 +84,7 @@ public class ItemServiceImpl implements ItemService {
         item.setAmount(itemRequestDto.getAmount());
         item.setPurchasePrice(itemRequestDto.getPurchasePrice());
         item.setSellPrice(itemRequestDto.getSellPrice());
-        item.setImage(itemRequestDto.getImage());
+        item.setImage(ImageUtil.convertToBytes(itemRequestDto.getImageBase64()));
         Item itemUpdated = itemRepository.save(item);
 
         return toItemDto(itemUpdated);
@@ -114,7 +115,7 @@ public class ItemServiceImpl implements ItemService {
                 .amount(itemRequestDto.getAmount())
                 .purchasePrice(itemRequestDto.getPurchasePrice())
                 .sellPrice(itemRequestDto.getSellPrice())
-                .image(itemRequestDto.getImage())
+                .image(ImageUtil.convertToBytes(itemRequestDto.getImageBase64()))
                 .build();
     }
 
@@ -130,7 +131,7 @@ public class ItemServiceImpl implements ItemService {
                 .amount(item.getAmount())
                 .purchasePrice(item.getPurchasePrice())
                 .sellPrice(item.getSellPrice())
-                .image(item.getImage())
+                .imageBase64(ImageUtil.encodeToBase64(item.getImage()))
                 .build();
     }
 }

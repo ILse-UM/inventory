@@ -15,10 +15,10 @@ import java.time.LocalDateTime;
 public class ItemLogDto {
     // TODO create service?
     private int id;
-    private Item item;
+    private ItemResponseDto item;
     private int previousAmount;
     private int currentAmount;
-    private LocalDateTime createdDate;
+    private String createdDate;
     private String change;
     private String actionType;
 }

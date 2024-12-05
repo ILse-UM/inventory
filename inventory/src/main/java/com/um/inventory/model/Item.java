@@ -27,5 +27,6 @@ public class Item {
     private int amount;
     private int purchasePrice;
     private int sellPrice;
-    private String image;
+    @Lob
+    private byte[] image;
 }

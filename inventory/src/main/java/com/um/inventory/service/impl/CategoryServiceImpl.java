@@ -28,7 +28,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public Optional<CategoryResponseDto> getCategoryById(int id) {
-        return Optional.empty();
+        return categoryRepository.findById(id).map(this::toCategoryDto);
     }
 
     @Override
