@@ -1,7 +1,6 @@
 package com.um.inventory.service.impl;
 
-import com.um.inventory.dto.ItemRequestDto;
-import com.um.inventory.dto.ItemResponseDto;
+import com.um.inventory.dto.*;
 import com.um.inventory.model.*;
 import com.um.inventory.repository.CategoryRepository;
 import com.um.inventory.repository.ItemLogRepository;
@@ -26,11 +25,17 @@ public class ItemServiceImpl implements ItemService {
 
     ItemLogRepository itemLogRepository;
 
+    TransactionServiceImpl transactionService;
+
     @Autowired
-    public ItemServiceImpl(ItemRepository itemRepository, ItemLogRepository itemLogRepository, CategoryRepository categoryRepository) {
+    public ItemServiceImpl(ItemRepository itemRepository,
+                           ItemLogRepository itemLogRepository,
+                           CategoryRepository categoryRepository,
+                           TransactionServiceImpl transactionService) {
         this.itemRepository = itemRepository;
         this.itemLogRepository = itemLogRepository;
         this.categoryRepository = categoryRepository;
+        this.transactionService = transactionService;
     }
 
     @Override
@@ -38,15 +43,29 @@ public class ItemServiceImpl implements ItemService {
         Item item = toItem(itemRequestDto);
         Item itemSaved = itemRepository.save(item);
 
-        ItemLog log = new ItemLog();
-        log.setItem(itemSaved);
-        log.setPreviousAmount(0);
-        log.setCurrentAmount(itemSaved.getAmount());
-        log.setChange(Change.PLUS);
-        log.setActionType(ActionType.ADD);
-        itemLogRepository.save(log);
+//        ItemLog log = new ItemLog();
+//        log.setItem(itemSaved);
+//        log.setPreviousAmount(0);
+//        log.setCurrentAmount(itemSaved.getAmount());
+//        log.setChange(Change.PLUS);
+//        log.setActionType(ActionType.ADD);
+//        itemLogRepository.save(log);
 
-        return toItemDto(itemSaved);
+        // Buat request transaksi dari item
+        TransactionRequestDto transactionRequestDto = new TransactionRequestDto();
+        transactionRequestDto.setTransactionType("PURCHASE");
+        transactionRequestDto.setDescription("Penambahan item baru");
+        transactionRequestDto.setItems(List.of(new TransactionItemRequestDto(
+                itemSaved.getId(),
+                itemSaved.getAmount()
+        )));
+
+        // Gunakan TransactionService
+        TransactionResponseDto transactionResponse = transactionService.createTransaction(transactionRequestDto);
+
+        // Ambil item dari response transaksi
+        TransactionItemResponseDto transactionItem = transactionResponse.getItems().get(0);
+        return transactionItem.getItem();
     }
 
 
@@ -67,14 +86,24 @@ public class ItemServiceImpl implements ItemService {
     public ItemResponseDto updateItem(ItemRequestDto itemRequestDto, int id) {
         Item item = itemRepository.findById(id).orElseThrow(() -> new RuntimeException("Item tidak ditemukan"));
 
-        ItemLog log = new ItemLog();
-        log.setItem(item);
-        log.setPreviousAmount(item.getAmount());
-        log.setCurrentAmount(itemRequestDto.getAmount());
-        log.setChange(itemRequestDto.getAmount() > item.getAmount() ? Change.PLUS : Change.MINUS);
-        log.setActionType(ActionType.UPDATE);
+//        ItemLog log = new ItemLog();
+//        log.setItem(item);
+//        log.setPreviousAmount(item.getAmount());
+//        log.setCurrentAmount(itemRequestDto.getAmount());
+//        log.setChange(itemRequestDto.getAmount() > item.getAmount() ? Change.PLUS : Change.MINUS);
+//        log.setActionType(ActionType.UPDATE);
+//
+//        itemLogRepository.save(log);
 
-        itemLogRepository.save(log);
+        // Buat request transaksi dari perubahan item
+        int amountChange = itemRequestDto.getAmount() - item.getAmount();
+        TransactionRequestDto transactionRequestDto = new TransactionRequestDto();
+        transactionRequestDto.setTransactionType(amountChange > 0 ? "PURCHASE" : "SALE");
+        transactionRequestDto.setDescription("Update jumlah item");
+        transactionRequestDto.setItems(List.of(new TransactionItemRequestDto(id, Math.abs(amountChange))));
+
+        // Gunakan TransactionService
+        transactionService.createTransaction(transactionRequestDto);
 
         item.setBarcode(itemRequestDto.getBarcode());
         item.setName(itemRequestDto.getName());
@@ -85,6 +114,7 @@ public class ItemServiceImpl implements ItemService {
         item.setPurchasePrice(itemRequestDto.getPurchasePrice());
         item.setSellPrice(itemRequestDto.getSellPrice());
         item.setImage(ImageUtil.convertToBytes(itemRequestDto.getImageBase64()));
+
         Item itemUpdated = itemRepository.save(item);
 
         return toItemDto(itemUpdated);
@@ -94,14 +124,20 @@ public class ItemServiceImpl implements ItemService {
     public void deleteItem(int id) {
         Item item = itemRepository.findById(id).orElseThrow(() -> new RuntimeException("Item tidak ditemukan"));
 
-        ItemLog log = new ItemLog();
-        log.setItem(item);
-        log.setPreviousAmount(item.getAmount());
-        log.setCurrentAmount(0);
-        log.setChange(Change.MINUS);
-        log.setActionType(ActionType.DELETE);
-        itemLogRepository.save(log);
+//        ItemLog log = new ItemLog();
+//        log.setItem(item);
+//        log.setPreviousAmount(item.getAmount());
+//        log.setCurrentAmount(0);
+//        log.setChange(Change.MINUS);
+//        log.setActionType(ActionType.DELETE);
+//        itemLogRepository.save(log);
 
+        TransactionRequestDto transactionRequestDto = new TransactionRequestDto();
+        transactionRequestDto.setTransactionType("SALE");
+        transactionRequestDto.setDescription("Penghapusan item");
+        transactionRequestDto.setItems(List.of(new TransactionItemRequestDto(id, item.getAmount())));
+
+        transactionService.createTransaction(transactionRequestDto);
         itemRepository.deleteById(id);
     }
 
