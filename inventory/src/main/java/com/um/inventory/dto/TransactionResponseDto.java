@@ -17,6 +17,7 @@ public class TransactionResponseDto {
     private int id;
     private String transactionDate;
     private TransactionType transactionType;
+    @Builder.Default
     private List<TransactionItemResponseDto> items = new ArrayList<>();
     private int totalPrice;
     private String description;

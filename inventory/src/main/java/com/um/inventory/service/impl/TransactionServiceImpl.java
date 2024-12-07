@@ -183,6 +183,7 @@ public class TransactionServiceImpl implements TransactionService {
     private TransactionResponseDto toTransactionResponseDto(Transaction transaction) {
         return TransactionResponseDto.builder()
                 .id(transaction.getId())
+                .description(transaction.getDescription())
                 .transactionDate(transaction.getTransactionDate().toString())
                 .transactionType(transaction.getTransactionType())
                 .items(transaction.getItems().stream().map(item ->

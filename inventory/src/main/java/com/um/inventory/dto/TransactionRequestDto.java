@@ -14,6 +14,8 @@ import java.util.List;
 @Builder
 public class TransactionRequestDto {
     private String transactionType;
+
+    @Builder.Default
     private List<TransactionItemRequestDto> items = new ArrayList<>();
     private String description;
 }
